@@ -1,17 +1,22 @@
 <script lang="ts">
   import { AceEditor } from "svelte-ace";
+  import Highlight from "svelte-highlight";
+  import dart from "svelte-highlight/src/languages/dart";
+  import github from "svelte-highlight/src/styles/github";
   import "brace/mode/json";
+  import "brace/mode/javascript";
   import "brace/theme/chrome";
+  import { convert2Dart } from "./utils/converter";
 
   let input: string;
   let className: string;
   let result: string;
 
   const sample = `{
-  "userId": 1,
-  "id": 1,
-  "title": "delectus aut autem",
-  "completed": false
+	"userId": 1,
+	"id": 1,
+	"title": "delectus aut autem",
+	"completed": false
 }    
 `;
 
@@ -20,42 +25,67 @@
     input = sample;
   };
 
+  const formatJson = () => {
+    input = JSON.stringify(JSON.parse(input), null, "\t");
+  };
+
   const updateInput = (value) => {
     input = value;
   };
 
+  $: isValidInput = () => {
+    try {
+      JSON.parse(input);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const convert = () => {
     console.info("Converting...");
+    let res = convert2Dart(input, className);
+    result = res;
   };
 </script>
 
+<svelte:head>
+  {@html github}
+</svelte:head>
 <main>
   <h1>JSON to Dart class converter</h1>
   <input type="text" placeholder="Class name" bind:value={className} />
   <button on:click={loadSample}>Load sample</button>
-  <button id="convert-button" on:click={convert}>Convert</button>
+  <button disabled={!isValidInput()} on:click={formatJson}>Format JSON</button>
+  {#if isValidInput()}
+    <button id="convert-button" on:click={convert}>Convert</button>
+  {/if}
   <div class="flex">
-    <AceEditor
-      on:input={(obj) => updateInput(obj.detail)}
-      width="90%"
-      height="300px"
-      lang="json"
-      theme="chrome"
-      value={input}
-    />
-    <AceEditor
-      width="90%"
-      height="300px"
-      lang="json"
-      theme="chrome"
-      value={result}
-    />
+    <div class="flex-child">
+      <AceEditor
+        on:input={(obj) => updateInput(obj.detail)}
+        width="90%"
+        height="300px"
+        lang="json"
+        theme="chrome"
+        value={input}
+      />
+    </div>
+    <div class="flex-child">
+      {#if result}
+        <Highlight language={dart} code={result} />
+      {/if}
+    </div>
   </div>
 </main>
 
 <style>
   .flex {
     display: flex;
+  }
+
+  .flex-child {
+    flex: 1 1 0px;
   }
 
   #convert-button {
