@@ -5,14 +5,18 @@ interface JsonMap {
 }
 interface JsonArray extends Array<AnyJson> {}
 
-function tsTypeToDartType(tsType: string): string {
+function tsTypeToDartType(tsType: string, value?: number): string {
   switch (tsType) {
     case "string":
       return "String";
     case "boolean":
       return "bool";
     case "number":
-      return "double";
+      if (value % 1 === 0) {
+        return "int";
+      } else {
+        return "double";
+      }
     default:
       return "unknown";
   }
@@ -25,7 +29,13 @@ export function convert2Dart(
   const jsonObj: AnyJson = JSON.parse(rawInput);
   let elements = Array<{ variable: string; type: string }>();
   Object.keys(jsonObj).forEach((key, i) => {
-    const elem = { variable: key, type: tsTypeToDartType(typeof jsonObj[key]) };
+    const elem = {
+      variable: key,
+      type: tsTypeToDartType(
+        typeof jsonObj[key],
+        typeof jsonObj[key] === "number" ? jsonObj[key] : null
+      ),
+    };
     elements.push(elem);
   });
 
