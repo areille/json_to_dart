@@ -82,7 +82,6 @@ export function convert2Dart(
 ): string {
   const jsonObj: AnyJson = JSON.parse(rawInput);
   const classes = extractClasses(jsonObj, className);
-  console.log(classes);
   let result = "";
 
   for (let i = 0; i < classes.length; i++) {
