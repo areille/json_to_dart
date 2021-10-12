@@ -76,22 +76,15 @@ function extractClasses(json: JSONValue, className: string): DartClass[] {
   return classes;
 }
 
+const isDartPrimitive = (val: string): boolean =>
+  val === "String" || val === "bool" || val === "int" || val === "double";
+
 function mapVariable(v: Variable): string {
-  if (
-    v.type === "String" ||
-    v.type === "bool" ||
-    v.type === "int" ||
-    v.type === "double"
-  ) {
+  if (isDartPrimitive(v.type)) {
     return `      ${v.name}: json['${v.name}'] as ${v.type},`;
   } else if (v.type.includes("List")) {
     let type = /List<(.+)>/.exec(v.type)[1];
-    if (
-      type === "String" ||
-      type === "bool" ||
-      type === "int" ||
-      type === "double"
-    ) {
+    if (isDartPrimitive(type)) {
       return `      ${v.name}: ${v.type}.from(json['${v.name}']),`;
     } else {
       return `      ${v.name}: ${v.type}.from((json['${v.name}'] as List<dynamic>)
