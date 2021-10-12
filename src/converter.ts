@@ -9,10 +9,12 @@ type JSONValue =
 
 interface DartClass {
   name: string;
-  variables: {
-    name: string;
-    type: string;
-  }[];
+  variables: Variable[];
+}
+
+interface Variable {
+  name: string;
+  type: string;
 }
 
 function extractClasses(json: JSONValue, className: string): DartClass[] {
@@ -74,19 +76,43 @@ function extractClasses(json: JSONValue, className: string): DartClass[] {
   return classes;
 }
 
+function mapVariable(v: Variable): string {
+  if (
+    v.type === "String" ||
+    v.type === "bool" ||
+    v.type === "int" ||
+    v.type === "double"
+  ) {
+    return `      ${v.name}: json['${v.name}'] as ${v.type},`;
+  } else if (v.type.includes("List")) {
+    let type = /List<(.+)>/.exec(v.type)[1];
+    if (
+      type === "String" ||
+      type === "bool" ||
+      type === "int" ||
+      type === "double"
+    ) {
+      return `      ${v.name}: ${v.type}.from(json['${v.name}']),`;
+    } else {
+      return `      ${v.name}: ${v.type}.from((json['${v.name}'] as List<dynamic>)
+        .map((e) => ${type}.fromJson(e as Map<String, dynamic>))),`;
+    }
+  } else {
+    return `      ${v.name}: ${v.type}.fromJson(json['${v.name}'] as Map<String, dynamic>),`;
+  }
+}
+
 function writeClass(dClass: DartClass): string {
   return `class ${dClass.name} {
 ${dClass.variables.map((v) => `  final ${v.type} ${v.name};`).join("\n")}
             
   const ${dClass.name}({
-${dClass.variables.map((v) => `    required this.${v.name};`).join("\n")}
+${dClass.variables.map((v) => `    required this.${v.name},`).join("\n")}
   });
           
   factory ${dClass.name}.fromJson(Map<String, dynamic> json) {
     return ${dClass.name}(
-${dClass.variables
-  .map((v) => `      ${v.name}: json['${v.name}'] as ${v.type},`)
-  .join("\n")}
+${dClass.variables.map(mapVariable).join("\n")}
     );
   }
           
