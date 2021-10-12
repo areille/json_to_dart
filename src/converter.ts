@@ -42,7 +42,7 @@ function extractClasses(json: JSONValue, className: string): DartClass[] {
         break;
       default:
         // Case complex type
-        const className = key.charAt(0).toUpperCase() + key.slice(1);
+        let className = key.charAt(0).toUpperCase() + key.slice(1);
         if (Array.isArray(json[key])) {
           const firstElem = (json[key] as JSONValue[])[0];
           switch (typeof firstElem) {
@@ -60,6 +60,9 @@ function extractClasses(json: JSONValue, className: string): DartClass[] {
               }
               break;
             default:
+              if (className.slice(-1) === "s") {
+                className = className.slice(0, -1);
+              }
               type = `List<${className}>`;
               classes = [...extractClasses(firstElem, className), ...classes];
               break;
