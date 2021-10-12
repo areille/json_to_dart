@@ -1,9 +1,11 @@
-// Heavily inspired from https://github.com/Microsoft/TypeScript/issues/1897#issuecomment-338650717
-type AnyJson = boolean | number | string | null | JsonArray | JsonMap;
-interface JsonMap {
-  [key: string]: AnyJson;
-}
-interface JsonArray extends Array<AnyJson> {}
+// https://github.com/Microsoft/TypeScript/issues/1897#issuecomment-822032151
+type JSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JSONValue[]
+  | { [key: string]: JSONValue };
 
 interface DartClass {
   name: string;
@@ -13,7 +15,7 @@ interface DartClass {
   }[];
 }
 
-function extractClasses(json: AnyJson, className: string): DartClass[] {
+function extractClasses(json: JSONValue, className: string): DartClass[] {
   let classes = Array<DartClass>();
   let newClass: DartClass = {
     name: className,
@@ -32,16 +34,38 @@ function extractClasses(json: AnyJson, className: string): DartClass[] {
       case "number":
         if (<number>json[key] % 1 === 0) {
           type = "int";
-          break;
         } else {
           type = "double";
-          break;
         }
+        break;
       default:
         // Case complex type
         const className = key.charAt(0).toUpperCase() + key.slice(1);
-        type = key.charAt(0).toUpperCase() + key.slice(1);
-        classes = [...extractClasses(json[key], className), ...classes];
+        if (Array.isArray(json[key])) {
+          const firstElem = (json[key] as JSONValue[])[0];
+          switch (typeof firstElem) {
+            case "string":
+              type = "List<String>";
+              break;
+            case "boolean":
+              type = "List<bool>";
+              break;
+            case "number":
+              if (firstElem % 1 === 0) {
+                type = "List<int>";
+              } else {
+                type = "List<double>";
+              }
+              break;
+            default:
+              type = `List<${className}>`;
+              classes = [...extractClasses(firstElem, className), ...classes];
+              break;
+          }
+        } else {
+          type = className;
+          classes = [...extractClasses(json[key], className), ...classes];
+        }
         break;
     }
     newClass.variables.push({ name, type });
@@ -80,7 +104,7 @@ export function convert2Dart(
   rawInput: string,
   className: string = "Generated"
 ): string {
-  const jsonObj: AnyJson = JSON.parse(rawInput);
+  const jsonObj: JSONValue = JSON.parse(rawInput);
   const classes = extractClasses(jsonObj, className);
   let result = "";
 
